@@ -1,5 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import Navbar from "./Navbar"
+import AddTask from "./AddTask"
+import List from "./List"
 
 function App() {
   return (
@@ -7,8 +9,8 @@ function App() {
     <BrowserRouter>
       <Navbar /> 
       <Routes>
-        <Route path="/" element={<h1 className="text-3xl text-black font-semibold m-5">Task List</h1>}/>
-        <Route path="/add" element={<h1 className="text-3xl text-black font-semibold m-5">Add Task</h1>}/>
+        <Route path="/" element={<List/>}/>
+        <Route path="/add" element={<AddTask />}/>
       </Routes>
     </BrowserRouter>
     </>

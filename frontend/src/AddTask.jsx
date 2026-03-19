@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 function AddTask() {
   const [taskData, setTaskData] = useState({
@@ -7,21 +7,39 @@ function AddTask() {
     description: ""
   });
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = location.state;
+  const isEdit = editData ? true : false;
+
+  useEffect(()=>{
+  if(editData){
+    setTaskData({
+      title: editData.title,
+      description: editData.description
+    })
+  }
+  },[editData])
 
 
   const handleAddTask = async (e) => {
     e.preventDefault();
+    let url = "http://localhost:3000/add-task";
+    let method = 'POST';
+    if(isEdit){
+      url = `http://localhost:3000/update/${editData._id}`
+      method = 'PUT'
+    }
     console.log(taskData);
-    let result = await fetch("http://localhost:3000/add-task", {
-      method: 'post',
+    let result = await fetch(url, {
+      method,
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify(taskData)
     })
     result = await result.json();
-    if (result) {
-      console.log("New Task Added");
+    if (result.success) {
+    console.log(isEdit ? "Task Updated" : "Task Added");
     }
     setTaskData({
       title: "",
@@ -60,7 +78,7 @@ function AddTask() {
         </div>
 
         <button type="submit" className="mt-2 bg-gray-900 text-white text-sm font-medium rounded-lg px-4 py-2.5 hover:bg-gray-700 transition-colors">
-          Add Task
+          {isEdit ? "Update Task" : "Add Task"}
         </button>
       </form>
     </div>

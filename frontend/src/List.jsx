@@ -13,7 +13,9 @@ function List() {
   }, []);
 
   const getListData = async () => {
-    let list = await fetch(`${API_BASE_URL}/tasks`);
+    let list = await fetch(`${API_BASE_URL}/tasks`,{
+      credentials:'include'
+    });
     list = await list.json();
     if (list.success) {
       setTaskData(list.result);

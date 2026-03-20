@@ -2,12 +2,19 @@ import express from 'express'
 import { collectionName, connection } from './dbconfig.js';
 import { ObjectId } from 'mongodb';
 import cors from 'cors'
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt'
+import cookieParser from 'cookie-parser';
 
 
 const app = express();
 
 app.use(express.json());
-app.use(cors())
+app.use(cors({
+    origin:"http://localhost:5173",
+    credentials:true
+}))
+app.use(cookieParser())
 
 app.post('/add-task', async (req, res) => {
     const db = await connection();
@@ -28,7 +35,7 @@ app.post('/add-task', async (req, res) => {
     }
 })
 
-app.get('/tasks', async (req, res) => {
+app.get('/tasks', verifyJWTToken, async (req, res) => {
     const db = await connection();
     const collection = db.collection(collectionName);
     const result = await collection.find().toArray();
@@ -46,6 +53,19 @@ app.get('/tasks', async (req, res) => {
         });
     }
 })
+
+function verifyJWTToken(req, res, next){
+    const token = req.cookies.token;
+    jwt.verify(token,'Todo', (error, decoded)=>{
+        if(error) {
+            return res.send({
+                msg:"invalid token",
+                success:false
+            })
+        }
+        next()
+    })
+}
 
 app.delete('/delete/:id', async (req, res) => {
     const db = await connection();
@@ -72,7 +92,7 @@ app.delete('/delete-many', async (req, res) => {
     const collection = db.collection(collectionName);
     let ids = req.body;
     const result = await collection.deleteMany({
-        _id: {$in: ids.map(id=>new ObjectId(id))}
+        _id: { $in: ids.map(id => new ObjectId(id)) }
     });
     if (result.deletedCount > 0) {
         res.send({
@@ -113,6 +133,83 @@ app.put('/update/:id', async (req, res) => {
         });
     }
 })
+
+app.post('/signup', async (req, res) => {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+        return res.send({ success: false, msg: "Missing fields" });
+    }
+
+    const db = await connection();
+    const collection = db.collection('user');
+
+    const existingUser = await collection.findOne({ email });
+    if (existingUser) {
+        return res.send({ success: false, msg: "User already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const response = await collection.insertOne({ name, email, password: hashedPassword});
+
+    jwt.sign(
+        { userId: response.insertedId, email },
+        'Todo',
+        { expiresIn: '7d' },
+        (err, token) => {
+            res.send({
+                success: true,
+                msg: "signup done",
+                token
+            });
+        }
+    );
+});
+
+
+
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.send({ success: false, msg: "Missing fields" });
+    }
+
+    const db = await connection();
+    const collection = db.collection('user');
+
+    const user = await collection.findOne({ email});
+    
+    if(!user){
+        return res.send({
+            success: false,
+            msg: "User not found"
+        });
+    }
+
+    const isMatched = await bcrypt.compare(password, user.password);
+
+    if (!isMatched) {
+        return res.send({
+            success: false,
+            msg: "Wrong password"
+        });
+    }
+
+    jwt.sign(
+        { userId: user._id, email},
+        'Todo',
+        { expiresIn: '7d' },
+        (err, token) => {
+            res.send({
+                success: true,
+                msg: "login successfully",
+                token
+            });
+        }
+    );
+});
 
 app.get('/', (req, res) => {
     res.send({

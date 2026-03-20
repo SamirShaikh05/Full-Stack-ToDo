@@ -40,12 +40,15 @@ function AddTask() {
     result = await result.json();
     if (result.success) {
     console.log(isEdit ? "Task Updated" : "Task Added");
+    navigate('/');
+    }
+    else{
+      alert("cant add")
     }
     setTaskData({
       title: "",
       description: ""
     });
-    navigate('/');
   }
 
   return (

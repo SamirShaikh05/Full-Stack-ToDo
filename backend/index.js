@@ -16,7 +16,7 @@ app.use(cors({
 }))
 app.use(cookieParser())
 
-app.post('/add-task', async (req, res) => {
+app.post('/add-task', verifyJWTToken, async (req, res) => {
     const db = await connection();
     const collection = db.collection(collectionName);
     const result = await collection.insertOne(req.body);
@@ -29,7 +29,7 @@ app.post('/add-task', async (req, res) => {
     }
     else {
         res.send({
-            message: "basic not added",
+            message: "task cant added",
             success: false
         });
     }
@@ -54,20 +54,7 @@ app.get('/tasks', verifyJWTToken, async (req, res) => {
     }
 })
 
-function verifyJWTToken(req, res, next){
-    const token = req.cookies.token;
-    jwt.verify(token,'Todo', (error, decoded)=>{
-        if(error) {
-            return res.send({
-                msg:"invalid token",
-                success:false
-            })
-        }
-        next()
-    })
-}
-
-app.delete('/delete/:id', async (req, res) => {
+app.delete('/delete/:id', verifyJWTToken, async (req, res) => {
     const db = await connection();
     const collection = db.collection(collectionName);
     const result = await collection.deleteOne({
@@ -87,7 +74,7 @@ app.delete('/delete/:id', async (req, res) => {
     }
 })
 
-app.delete('/delete-many', async (req, res) => {
+app.delete('/delete-many', verifyJWTToken, async (req, res) => {
     const db = await connection();
     const collection = db.collection(collectionName);
     let ids = req.body;
@@ -108,7 +95,7 @@ app.delete('/delete-many', async (req, res) => {
     }
 })
 
-app.put('/update/:id', async (req, res) => {
+app.put('/update/:id', verifyJWTToken, async (req, res) => {
     const db = await connection();
     const collection = db.collection(collectionName);
     const result = await collection.updateOne(
@@ -133,6 +120,20 @@ app.put('/update/:id', async (req, res) => {
         });
     }
 })
+
+
+function verifyJWTToken(req, res, next){
+    const token = req.cookies.token;
+    jwt.verify(token,'Todo', (error, decoded)=>{
+        if(error) {
+            return res.send({
+                msg:"invalid token",
+                success:false
+            })
+        }
+        next()
+    })
+}
 
 app.post('/signup', async (req, res) => {
     const { name, email, password } = req.body;

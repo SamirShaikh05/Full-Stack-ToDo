@@ -23,16 +23,20 @@ function List() {
   };
 
   const deleteTask = async (taskId) => {
-    const response = await fetch(`${API_BASE_URL}/delete/${taskId}`, { method: "DELETE" });
+    const response = await fetch(`${API_BASE_URL}/delete/${taskId}`, { method: "DELETE" , credentials:'include'});
     const result = await response.json();
     if (result.success) {
       setTaskData((prev) => prev.filter((task) => task._id !== taskId));
+    }
+    else{
+      alert("cant delete")
     }
   };
 
   const deleteSelectedTasks = async () => {
     const response = await fetch(`${API_BASE_URL}/delete-many`, 
       { 
+        credentials:'include',
         method: "DELETE",
         headers:{
           "Content-Type": "application/json"
@@ -44,6 +48,9 @@ function List() {
     if (result.success) {
       getListData();
       setSelectedTask([])
+    }
+    else{
+      alert("cant delete")
     }
   };
 

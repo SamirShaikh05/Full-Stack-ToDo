@@ -202,6 +202,13 @@ app.post('/signup', authLimiter, async (req, res) => {
         process.env.JWT_SECRET,
         { expiresIn: '7d' },
         (err, token) => {
+
+            res.cookie("token", token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none"
+            });
+
             res.send({
                 success: true,
                 msg: "signup done",
@@ -213,7 +220,7 @@ app.post('/signup', authLimiter, async (req, res) => {
 
 
 
-app.post('/login',authLimiter,  async (req, res) => {
+app.post('/login', authLimiter, async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -246,6 +253,13 @@ app.post('/login',authLimiter,  async (req, res) => {
         process.env.JWT_SECRET,
         { expiresIn: '7d' },
         (err, token) => {
+
+            res.cookie("token", token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none"
+            });
+
             res.send({
                 success: true,
                 msg: "login successfully",

@@ -12,9 +12,13 @@ function Login() {
             navigate('/');
         }
     }, [])
+
+    const API_BASE_URL = import.meta.env.VITE_API_URL;
+
     const loginUser = async (e) => {
         e.preventDefault();
-        let result = await fetch('http://localhost:3000/login', {
+        let result = await fetch(`${API_BASE_URL}/login`, {
+            credentials:'include',
             method: 'POST',
             headers: {
                 "Content-Type": "application/json"
@@ -24,7 +28,6 @@ function Login() {
         result = await result.json()
 
         if (result.success) {
-            document.cookie = "token=" + result.token;
             localStorage.setItem('login', userData.email);
             window.dispatchEvent(new Event("localStorage-change"))
             navigate('/')

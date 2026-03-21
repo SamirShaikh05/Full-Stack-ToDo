@@ -19,14 +19,16 @@ function AddTask() {
     })
   }
   },[editData])
+  
 
+  const API_BASE_URL = import.meta.env.VITE_API_URL;
 
   const handleAddTask = async (e) => {
     e.preventDefault();
-    let url = "http://localhost:3000/add-task";
+    let url = `${API_BASE_URL}/add-task`;
     let method = 'POST';
     if(isEdit){
-      url = `http://localhost:3000/update/${editData._id}`
+      url = `${API_BASE_URL}/update/${editData._id}`
       method = 'PUT'
     }
     console.log(taskData);

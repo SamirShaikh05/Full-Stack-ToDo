@@ -15,10 +15,14 @@ function Signup() {
             navigate('/');
         }
     }, [])
+    const API_BASE_URL = import.meta.env.VITE_API_URL;
 
     const signupUser = async (e) => {
         e.preventDefault();
-        let result = await fetch('http://localhost:3000/signup', {
+        console.log(API_BASE_URL);
+        
+        let result = await fetch(`${API_BASE_URL}/signup`, {
+            credentials:'include',
             method: 'POST',
             headers: {
                 "Content-Type": "application/json"
@@ -28,7 +32,6 @@ function Signup() {
         result = await result.json()
 
         if (result.success) {
-            document.cookie = "token=" + result.token;
             localStorage.setItem('login', userData.email);
             window.dispatchEvent(new Event("localStorage-change"))
             navigate('/')

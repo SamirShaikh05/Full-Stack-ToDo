@@ -11,15 +11,18 @@ const app = express();
 
 app.use(express.json());
 app.use(cors({
-    origin:"http://localhost:5173",
-    credentials:true
+    origin: "http://localhost:5173",
+    credentials: true
 }))
 app.use(cookieParser())
 
 app.post('/add-task', verifyJWTToken, async (req, res) => {
     const db = await connection();
     const collection = db.collection(collectionName);
-    const result = await collection.insertOne(req.body);
+    const result = await collection.insertOne({
+        ...req.body,
+        userId: req.user.userId
+    });
     if (result) {
         res.send({
             message: "task added",
@@ -38,7 +41,9 @@ app.post('/add-task', verifyJWTToken, async (req, res) => {
 app.get('/tasks', verifyJWTToken, async (req, res) => {
     const db = await connection();
     const collection = db.collection(collectionName);
-    const result = await collection.find().toArray();
+    const result = await collection.find({
+        userId: req.user.userId
+    }).toArray();
     if (result) {
         res.send({
             message: "task list fetched",
@@ -58,7 +63,8 @@ app.delete('/delete/:id', verifyJWTToken, async (req, res) => {
     const db = await connection();
     const collection = db.collection(collectionName);
     const result = await collection.deleteOne({
-        _id: new ObjectId(req.params.id)
+        _id: new ObjectId(req.params.id),
+        userId: req.user.userId
     });
     if (result.deletedCount > 0) {
         res.send({
@@ -79,7 +85,8 @@ app.delete('/delete-many', verifyJWTToken, async (req, res) => {
     const collection = db.collection(collectionName);
     let ids = req.body;
     const result = await collection.deleteMany({
-        _id: { $in: ids.map(id => new ObjectId(id)) }
+        _id: { $in: ids.map(id => new ObjectId(id)) },
+        userId: req.user.userId
     });
     if (result.deletedCount > 0) {
         res.send({
@@ -99,7 +106,10 @@ app.put('/update/:id', verifyJWTToken, async (req, res) => {
     const db = await connection();
     const collection = db.collection(collectionName);
     const result = await collection.updateOne(
-        { _id: new ObjectId(req.params.id) },
+        {
+            _id: new ObjectId(req.params.id),
+            userId: req.user.userId
+        },
         {
             $set: {
                 title: req.body.title,
@@ -122,17 +132,24 @@ app.put('/update/:id', verifyJWTToken, async (req, res) => {
 })
 
 
-function verifyJWTToken(req, res, next){
+function verifyJWTToken(req, res, next) {
     const token = req.cookies.token;
-    jwt.verify(token,'Todo', (error, decoded)=>{
-        if(error) {
+
+    if (!token) {
+        return res.send({ success: false, msg: "No token" });
+    }
+
+    jwt.verify(token, 'Todo', (error, decoded) => {
+        if (error) {
             return res.send({
-                msg:"invalid token",
-                success:false
-            })
+                msg: "invalid token",
+                success: false
+            });
         }
-        next()
-    })
+
+        req.user = decoded; // 🔥 VERY IMPORTANT
+        next();
+    });
 }
 
 app.post('/signup', async (req, res) => {
@@ -152,7 +169,7 @@ app.post('/signup', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const response = await collection.insertOne({ name, email, password: hashedPassword});
+    const response = await collection.insertOne({ name, email, password: hashedPassword });
 
     jwt.sign(
         { userId: response.insertedId, email },
@@ -180,9 +197,9 @@ app.post('/login', async (req, res) => {
     const db = await connection();
     const collection = db.collection('user');
 
-    const user = await collection.findOne({ email});
-    
-    if(!user){
+    const user = await collection.findOne({ email });
+
+    if (!user) {
         return res.send({
             success: false,
             msg: "User not found"
@@ -199,7 +216,7 @@ app.post('/login', async (req, res) => {
     }
 
     jwt.sign(
-        { userId: user._id, email},
+        { userId: user._id, email },
         'Todo',
         { expiresIn: '7d' },
         (err, token) => {

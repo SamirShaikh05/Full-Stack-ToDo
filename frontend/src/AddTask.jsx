@@ -31,6 +31,7 @@ function AddTask() {
     }
     console.log(taskData);
     let result = await fetch(url, {
+      credentials:"include",
       method,
       headers: {
         "Content-Type": "application/json"

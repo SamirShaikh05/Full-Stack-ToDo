@@ -5,16 +5,42 @@ import cors from 'cors'
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt'
 import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv'
+import rateLimit from 'express-rate-limit';
+
+dotenv.config();
 
 
 const app = express();
 
 app.use(express.json());
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: process.env.CLIENT_URL,
     credentials: true
 }))
 app.use(cookieParser())
+
+
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: {
+        success: false,
+        msg: "Too many attempts. Try again later."
+    }
+});
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: {
+        success: false,
+        msg: "Too many requests. Slow down."
+    }
+});
+
+app.use(apiLimiter);
 
 app.post('/add-task', verifyJWTToken, async (req, res) => {
     const db = await connection();
@@ -139,7 +165,7 @@ function verifyJWTToken(req, res, next) {
         return res.send({ success: false, msg: "No token" });
     }
 
-    jwt.verify(token, 'Todo', (error, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET, (error, decoded) => {
         if (error) {
             return res.send({
                 msg: "invalid token",
@@ -147,12 +173,12 @@ function verifyJWTToken(req, res, next) {
             });
         }
 
-        req.user = decoded; // 🔥 VERY IMPORTANT
+        req.user = decoded;
         next();
     });
 }
 
-app.post('/signup', async (req, res) => {
+app.post('/signup', authLimiter, async (req, res) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
@@ -173,7 +199,7 @@ app.post('/signup', async (req, res) => {
 
     jwt.sign(
         { userId: response.insertedId, email },
-        'Todo',
+        process.env.JWT_SECRET,
         { expiresIn: '7d' },
         (err, token) => {
             res.send({
@@ -187,7 +213,7 @@ app.post('/signup', async (req, res) => {
 
 
 
-app.post('/login', async (req, res) => {
+app.post('/login',authLimiter,  async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -217,7 +243,7 @@ app.post('/login', async (req, res) => {
 
     jwt.sign(
         { userId: user._id, email },
-        'Todo',
+        process.env.JWT_SECRET,
         { expiresIn: '7d' },
         (err, token) => {
             res.send({
@@ -229,6 +255,7 @@ app.post('/login', async (req, res) => {
     );
 });
 
+
 app.get('/', (req, res) => {
     res.send({
         message: "basic API done",
@@ -236,4 +263,4 @@ app.get('/', (req, res) => {
     });
 })
 
-app.listen(3000);
+app.listen(process.env.PORT || 3000);
